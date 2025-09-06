@@ -1,0 +1,5 @@
+backend/.env
+echo "backend/.env" >> .gitignore
+echo ".env" >> .gitignore
+echo "*.env" >> .gitignorebackend/.env
+.env
