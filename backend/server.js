@@ -27,7 +27,10 @@ try {
   console.log(error);
 }
 };
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(cors({ 
+  origin: ["http://localhost:5173", "https://marketer-link2-pbk84gdkf-zmuritala8-2371s-projects.vercel.app"], 
+  credentials: true 
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/applications", applicationRoutes);
@@ -49,7 +52,11 @@ app.use((err, req, res, next) => {
 });
 
 
-app.listen(8800, () => {
+app.get('/', (req, res) => {
+  res.json({ message: 'Marketer Link API is running successfully!' });
+});
+const PORT = process.env.PORT || 8800;
+app.listen(PORT, () => {
   connect()
-  console.log("Backend server is running!");
+  console.log(`Backend server is running on port ${PORT}!`);
 });
