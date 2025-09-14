@@ -1,4 +1,4 @@
-// routes/profile.routes.js
+// routes/profiles.js
 import express from "express";
 import { verifyToken } from "../middleware/jwt.js";
 import {
@@ -11,20 +11,14 @@ import {
 
 const router = express.Router();
 
-// Get all public profiles
-router.get('/all', getAllProfiles);
+router.post("/", verifyToken, createOrUpdateProfile);
 
-// Get current user's profile
-router.get('/me', verifyToken, getMyProfile);
+router.get("/me", verifyToken, getMyProfile);
 
-// Create or update profile
-router.post('/', verifyToken, createOrUpdateProfile);
-router.put('/', verifyToken, createOrUpdateProfile);
+router.get("/user/:userId", verifyToken, getProfile);
 
-// Update avatar
-router.put('/avatar', verifyToken, updateAvatar);
+router.patch("/avatar", verifyToken, updateAvatar);
 
-// Get profile by user ID
-router.get('/:userId', getProfile);
+router.get("/", getAllProfiles);
 
 export default router;

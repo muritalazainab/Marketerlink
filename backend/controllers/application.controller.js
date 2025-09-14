@@ -1,9 +1,8 @@
-// Since marketerId is String, you need to manually populate user data
-// Replace your application.controller.js with this:
-
 import Application from "../models/application.model.js";
 import Gig from "../models/gig.model.js";
 import User from "../models/user.model.js";
+import Conversation from "../models/conversation.model.js"; // Add this import
+import Notification from "../models/notification.model.js"; // Add this import (you'll need to create this model)
 import createError from "../utils/createError.js";
 
 export const createApplication = async (req, res, next) => {
@@ -42,6 +41,22 @@ export const createApplication = async (req, res, next) => {
     });
     
     await newApplication.save();
+    
+    // ADDED: Create notification for gig owner (seller)
+    try {
+      const notification = new Notification({
+        userId: gig.userId, // The gig owner
+        type: 'new_application',
+        title: 'New Application Received!',
+        message: `You received a new application for "${gig.title}" with a bid of $${bidAmount}.`,
+        relatedId: newApplication._id,
+        isRead: false
+      });
+      await notification.save();
+    } catch (notifError) {
+      console.log("Failed to create notification:", notifError);
+      // Don't fail the whole request if notification fails
+    }
     
     // Manually populate since marketerId is String
     const populatedApplication = await Application.findById(newApplication._id).populate('gigId');
@@ -94,33 +109,24 @@ export const getApplicationById = async (req, res, next) => {
 // Get applications for all of seller's gigs
 export const getApplicationsForSeller = async (req, res, next) => {
   try {
-    // First get all gigs owned by the current user
-    const userGigs = await Gig.find({ userId: req.userId });
-    const gigIds = userGigs.map(gig => gig._id);
-
-    // Then get all applications for those gigs
-    const applications = await Application.find({
-      gigId: { $in: gigIds }
-    })
-    .populate('gigId', 'title shortDesc price')
-    .sort({ createdAt: -1 });
-
-    // Manually populate marketer data
-    const populatedApplications = await Promise.all(
-      applications.map(async (app) => {
-        const marketerUser = await User.findById(app.marketerId);
-        return {
-          ...app.toObject(),
-          marketerId: marketerUser
-        };
+    const applications = await Application.find({})
+      .populate({
+        path: 'gigId',
+        match: { userId: req.userId }, 
       })
-    );
-
-    res.status(200).json(populatedApplications);
+      .populate({
+        path: 'marketerId', 
+        select: 'username email country createdAt profilePicture' 
+      })
+    
+    // Filter out applications where gig doesn't belong to this seller
+    const sellerApplications = applications.filter(app => app.gigId !== null)
+    
+    res.status(200).json(sellerApplications)
   } catch (err) {
-    next(err);
+    next(err)
   }
-};
+}
 
 // Get applications for a specific gig (seller only)
 export const getApplicationsForGig = async (req, res, next) => {
@@ -157,7 +163,7 @@ export const getApplicationsForGig = async (req, res, next) => {
   }
 };
 
-// Accept an application
+// UPDATED: Accept an application - NOW CREATES CONVERSATION
 export const acceptApplication = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -191,13 +197,62 @@ export const acceptApplication = async (req, res, next) => {
       { status: 'rejected' }
     );
 
+    // ADDED: Create conversation between seller and marketer
+    const conversationId = req.userId + application.marketerId; // Seller + Marketer
+    
+    try {
+      // Check if conversation already exists
+      let conversation = await Conversation.findOne({ id: conversationId });
+      
+      if (!conversation) {
+        conversation = new Conversation({
+          id: conversationId,
+          sellerId: req.userId, // The gig owner (seller)
+          buyerId: application.marketerId, // The marketer
+          readBySeller: true,
+          readByBuyer: false,
+          lastMessage: `Your application for "${application.gigId.title}" has been accepted! Let's discuss the project details.`
+        });
+        await conversation.save();
+      }
+
+      // ADDED: Create notification for marketer
+      const marketerNotification = new Notification({
+        userId: application.marketerId,
+        type: 'application_accepted',
+        title: 'Application Accepted!',
+        message: `Your application for "${application.gigId.title}" has been accepted. You can now chat with the client.`,
+        relatedId: application._id,
+        conversationId: conversationId,
+        isRead: false
+      });
+      await marketerNotification.save();
+
+      // ADDED: Create notification for seller (optional)
+      const sellerNotification = new Notification({
+        userId: req.userId,
+        type: 'application_decision_made',
+        title: 'Application Accepted',
+        message: `You accepted an application for "${application.gigId.title}". You can now start chatting with the marketer.`,
+        relatedId: application._id,
+        conversationId: conversationId,
+        isRead: true // Mark as read since they initiated the action
+      });
+      await sellerNotification.save();
+
+    } catch (convError) {
+      console.log("Failed to create conversation or notifications:", convError);
+      // Don't fail the whole request if conversation creation fails
+    }
+
     // Manually populate response
     const updatedApplication = await Application.findById(id).populate('gigId');
     const marketerUser = await User.findById(updatedApplication.marketerId);
     
     const responseData = {
       ...updatedApplication.toObject(),
-      marketerId: marketerUser
+      marketerId: marketerUser,
+      conversationId: conversationId // ADDED: Return conversation ID
     };
 
     res.status(200).json(responseData);
@@ -206,7 +261,7 @@ export const acceptApplication = async (req, res, next) => {
   }
 };
 
-// Reject an application
+// UPDATED: Reject an application - NOW CREATES NOTIFICATION
 export const rejectApplication = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -229,6 +284,22 @@ export const rejectApplication = async (req, res, next) => {
     // Update application status
     application.status = 'rejected';
     await application.save();
+
+    // ADDED: Create notification for marketer
+    try {
+      const notification = new Notification({
+        userId: application.marketerId,
+        type: 'application_rejected',
+        title: 'Application Update',
+        message: `Your application for "${application.gigId.title}" was not selected this time. Keep applying to other projects!`,
+        relatedId: application._id,
+        isRead: false
+      });
+      await notification.save();
+    } catch (notifError) {
+      console.log("Failed to create notification:", notifError);
+      // Don't fail the whole request if notification fails
+    }
 
     // Manually populate response
     const updatedApplication = await Application.findById(id).populate('gigId');

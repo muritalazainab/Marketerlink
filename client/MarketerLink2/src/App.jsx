@@ -32,7 +32,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <Navbar />
           <Outlet />
-          {/* <Footer /> */}
+       
         </QueryClientProvider>
       </div>
     );

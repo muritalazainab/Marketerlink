@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { Menu, X, User, LogOut, Plus, MessageCircle, Settings, ChevronDown } from "lucide-react"
+import { Menu, X, User, LogOut, Plus, MessageCircle, Settings, ChevronDown, LayoutDashboard, Bell } from "lucide-react"
 import newRequest from "../../../utils/newRequest"
+import NotificationDropdown from '../Notification/NotificationDropdown';
 
 function Navbar() {
   const [active, setActive] = useState(false)
@@ -22,11 +23,33 @@ function Navbar() {
     }
   }, [])
 
-  const currentUser = JSON.parse(localStorage.getItem("currentUser"))
+  // Close dropdown when pathname changes (fixes the persistent dropdown issue)
+  useEffect(() => {
+    setOpen(false)
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  const getCurrentUser = () => {
+    try {
+      const userString = localStorage.getItem('currentUser');
+      return userString ? JSON.parse(userString) : null;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      localStorage.removeItem('currentUser');
+      return null;
+    }
+  };
+
+  const currentUser = getCurrentUser();
 
   const handleLogout = async () => {
     try {
       sessionStorage.setItem("isLoggingOut", "true")
+      
+      // Close dropdown immediately on logout
+      setOpen(false)
+      setMobileMenuOpen(false)
+      
       await newRequest.post("/auth/logout")
 
       localStorage.removeItem("currentUser")
@@ -44,6 +67,28 @@ function Navbar() {
   }
 
   const isHomePage = pathname === "/"
+  const isDashboardPage = pathname.includes('dashboard')
+  const isSellerDashboard = pathname === '/seller-dashboard'
+  const isMarketerDashboard = pathname === '/marketer-dashboard'
+
+  // Determine dashboard link based on user type
+  const getDashboardLink = () => {
+    if (!currentUser) return null
+    if (currentUser.isSeller && currentUser.role !== "marketer") {
+      return '/seller-dashboard'
+    } else {
+      return '/marketer-dashboard'
+    }
+  }
+
+  const getDashboardLabel = () => {
+    if (!currentUser) return 'Dashboard'
+    if (currentUser.isSeller && currentUser.role !== "marketer") {
+      return 'Seller Dashboard'
+    } else {
+      return 'Marketer Dashboard'
+    }
+  }
 
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-300 ${
@@ -68,81 +113,7 @@ function Navbar() {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               {/* Navigation Links */}
-              {/* <Link
-                to="/gigs"
-                className={`px-3 py-2 text-sm font-medium transition-colors hover:text-blue-600 ${
-                  active || !isHomePage ? "text-gray-700" : "text-white hover:text-blue-200"
-                }`}
-              >
-                Browse Gigs
-              </Link> */}
-              
-              {/* {!currentUser?.isSeller && (
-                <Link
-                  to="/become-seller"
-                  className={`px-3 py-2 text-sm font-medium transition-colors hover:text-blue-600 ${
-                    active || !isHomePage ? "text-gray-700" : "text-white hover:text-blue-200"
-                  }`}
-                >
-                  Become a Seller
-                </Link>
-              )} */}
-
-         
-            </div>
-          </div>
-
-          {/* User Menu / Auth Buttons */}
-          <div className="hidden md:block">
-            <div className="ml-4 flex items-center md:ml-6">
-              {currentUser ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setOpen(!open)}
-                    className="flex items-center space-x-3 bg-white rounded-full p-1 pr-3 shadow-md hover:shadow-lg transition-all duration-200"
-                  >
-                    <img
-                      src={currentUser.img || "/images/noavatar.jpg"}
-                      alt=""
-                      className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
-                    />
-                    <span className="text-gray-700 font-medium text-sm">
-                      {currentUser?.username}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {open && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{currentUser.username}</p>
-                        <p className="text-sm text-gray-500">
-                          {currentUser.isSeller ? "Seller Account" : "Marketer Account"}
-                        </p>
-                      </div>
-
-                      {currentUser.isSeller && (
-                        <>
-                          {/* <Link
-                            to="/create-profile"
-                            className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                            onClick={() => setOpen(false)}
-                          >
-                            <User className="w-4 h-4 mr-3" />
-                            Create Profile
-                          </Link> */}
-                          <Link
-                            to="/add"
-                            className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                            onClick={() => setOpen(false)}
-                          >
-                            <Plus className="w-4 h-4 mr-3" />
-                            Add New Gig
-                          </Link>
-                        </>
-                      )}
-                               {currentUser && !currentUser.isSeller && (
+              {currentUser && !currentUser.isSeller && (
                 <Link
                   to="/create-profile"
                   className={`px-3 py-2 text-sm font-medium transition-colors hover:text-blue-600 ${
@@ -152,30 +123,92 @@ function Navbar() {
                   Create Profile
                 </Link>
               )}
-                      <Link
-                        to="/messages"
-                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setOpen(false)}
-                      >
-                        <MessageCircle className="w-4 h-4 mr-3" />
-                        Messages
-                      </Link>
+            </div>
+          </div>
 
-                    
+          {/* User Menu / Auth Buttons */}
+          <div className="hidden md:block">
+            <div className="ml-4 flex items-center md:ml-6 space-x-3">
+              {currentUser && (
+                <>
+                  {/* Notification Dropdown */}
+                  <NotificationDropdown />
+                  
+                  {/* User Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpen(!open)}
+                      className="flex items-center space-x-3 bg-white rounded-full p-1 pr-3 shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      <img
+                        src={currentUser.img || "/images/noavatar.jpg"}
+                        alt=""
+                        className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
+                      />
+                      <span className="text-gray-700 font-medium text-sm">
+                        {currentUser?.username}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
 
-                      <div className="border-t border-gray-100 mt-2 pt-2">
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    {/* Dropdown Menu */}
+                    {open && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{currentUser.username}</p>
+                          <p className="text-sm text-gray-500">
+                            {currentUser.isSeller ? "Seller Account" : "Marketer Account"}
+                          </p>
+                        </div>
+
+                        {/* Dashboard Link - Only show if not already on dashboard and user is logged in */}
+                        {currentUser && !isDashboardPage && getDashboardLink() && (
+                          <Link
+                            to={getDashboardLink()}
+                            className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => setOpen(false)}
+                          >
+                            <LayoutDashboard className="w-4 h-4 mr-3" />
+                            {getDashboardLabel()}
+                          </Link>
+                        )}
+
+                        {currentUser.isSeller && (
+                          <Link
+                            to="/add"
+                            className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => setOpen(false)}
+                          >
+                            <Plus className="w-4 h-4 mr-3" />
+                            Add New Gig
+                          </Link>
+                        )}
+
+                        <Link
+                          to="/messages"
+                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          onClick={() => setOpen(false)}
                         >
-                          <LogOut className="w-4 h-4 mr-3" />
-                          Sign Out
-                        </button>
+                          <MessageCircle className="w-4 h-4 mr-3" />
+                          Messages
+                        </Link>
+
+                        <div className="border-t border-gray-100 mt-2 pt-2">
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4 mr-3" />
+                            Sign Out
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
+                    )}
+                  </div>
+                </>
+              )}
+
+              {!currentUser && (
                 <div className="flex items-center space-x-4">
                   <Link
                     to="/login"
@@ -223,17 +256,7 @@ function Navbar() {
                 Browse Gigs
               </Link>
               
-              {!currentUser?.isSeller && (
-                <Link
-                  to="/become-seller"
-                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Become a Seller
-                </Link>
-              )}
-
-              {/* {currentUser && !currentUser.isSeller && (
+              {currentUser && !currentUser.isSeller && (
                 <Link
                   to="/create-profile"
                   className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
@@ -241,14 +264,14 @@ function Navbar() {
                 >
                   Create Profile
                 </Link>
-              )} */}
+              )}
 
               {currentUser ? (
                 <>
                   <div className="border-t border-gray-200 pt-3 mt-3">
                     <div className="flex items-center px-3 py-2">
                       <img
-                        src={currentUser.img || "/img/noavatar.jpg"}
+                        src={currentUser.img || "/images/noavatar.jpg"}
                         alt=""
                         className="w-8 h-8 rounded-full object-cover border-2 border-gray-200"
                       />
@@ -259,6 +282,17 @@ function Navbar() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Dashboard Link for Mobile - Only show if not on dashboard */}
+                    {currentUser && !isDashboardPage && getDashboardLink() && (
+                      <Link
+                        to={getDashboardLink()}
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {getDashboardLabel()}
+                      </Link>
+                    )}
 
                     {currentUser.isSeller && (
                       <Link

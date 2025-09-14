@@ -1,4 +1,3 @@
-// Replace your application.model.js with this:
 
 import mongoose from "mongoose";
 

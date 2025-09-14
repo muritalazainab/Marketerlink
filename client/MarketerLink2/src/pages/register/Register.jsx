@@ -25,45 +25,6 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('currentUser'));
-    const hasSeenPrompt = localStorage.getItem('hasSeenProfilePrompt');
-    
-    if (user && !user.isSeller && !hasSeenPrompt) {
-      checkProfileStatus().then(hasProfile => {
-        if (!hasProfile) {
-          setShowProfilePrompt(true);
-        }
-      });
-    }
-  }, []);
-
-  const checkProfileStatus = async () => {
-    try {
-      const response = await fetch('/api/profiles/me', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        const profile = await response.json();
-        return profile.isComplete;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleCreateProfile = () => {
-    setShowProfilePrompt(false);
-    setShowProfileForm(true);
-    localStorage.setItem('hasSeenProfilePrompt', 'true');
-  };
-
-  const handleClosePrompt = () => {
-    setShowProfilePrompt(false);
-    localStorage.setItem('hasSeenProfilePrompt', 'true');
-  };
-  
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -74,6 +35,22 @@ export default function Register() {
     setUser((prev) => ({ ...prev, isSeller: e.target.checked }));
   };
 
+  const handleCreateProfile = () => {
+    setShowProfilePrompt(false);
+    setShowProfileForm(true);
+  };
+
+  const handleClosePrompt = () => {
+    setShowProfilePrompt(false);
+    // Navigate to dashboard after closing prompt
+    navigate("/marketer-dashboard");
+  };
+
+  const handleProfileComplete = () => {
+    setShowProfileForm(false);
+    navigate("/marketer-dashboard");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -81,18 +58,58 @@ export default function Register() {
 
     try {
       const url = await upload(file);
-      await newRequest.post("/auth/register", {
+      const response = await newRequest.post("/auth/register", {
         ...user,
         img: url,
       });
-      
-      if (user.isSeller) {
-        navigate("/seller-dashboard");   
-      } else {
-        navigate("/marketer-dashboard"); 
+
+      // Store user data and token after successful registration
+      if (response.data) {
+        // Handle different response formats
+        let userData, token;
+        
+        if (response.data.user && response.data.token) {
+          userData = response.data.user;
+          token = response.data.token;
+        } else if (response.data.token) {
+          // If user data is embedded in the response
+          token = response.data.token;
+          userData = { ...user, img: url }; // Use the data we just sent
+        } else {
+          // Try auto-login if no token returned
+          const loginResponse = await newRequest.post("/auth/login", {
+            email: user.email,
+            password: user.password
+          });
+          userData = loginResponse.data.user;
+          token = loginResponse.data.token;
+        }
+        
+        // Store in localStorage safely
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+        localStorage.setItem("token", token);
+
+        // Navigate based on user type
+        if (user.isSeller) {
+          navigate("/seller-dashboard");   
+        } else {
+          // For marketers, show profile prompt first
+          setShowProfilePrompt(true);
+        }
       }
     } catch (err) {
-      setError(err.response?.data || "Something went wrong");
+      console.error("Registration error:", err);
+      let errorMessage = "Something went wrong";
+      
+      if (err.code === 'ERR_NETWORK' || err.message?.includes('ERR_CONNECTION_REFUSED')) {
+        errorMessage = "Cannot connect to server. Please check if the backend is running.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data) {
+        errorMessage = err.response.data;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -303,7 +320,7 @@ export default function Register() {
       {showProfileForm && (
         <ProfileForm
           isModal={true}
-          onClose={() => setShowProfileForm(false)}
+          onClose={handleProfileComplete}
         />
       )}
     </div>

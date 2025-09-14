@@ -1,5 +1,7 @@
+// Updated conversation.controller.js
 import createError from "../utils/createError.js";
 import Conversation from "../models/conversation.model.js";
+import User from "../models/user.model.js";
 
 export const createConversation = async (req, res, next) => {
   const newConversation = new Conversation({
@@ -24,8 +26,6 @@ export const updateConversation = async (req, res, next) => {
       { id: req.params.id },
       {
         $set: {
-          // readBySeller: true,
-          // readByBuyer: true,
           ...(req.isSeller ? { readBySeller: true } : { readByBuyer: true }),
         },
       },
@@ -48,12 +48,41 @@ export const getSingleConversation = async (req, res, next) => {
   }
 };
 
+// Updated getConversations to include user information
 export const getConversations = async (req, res, next) => {
   try {
     const conversations = await Conversation.find(
       req.isSeller ? { sellerId: req.userId } : { buyerId: req.userId }
     ).sort({ updatedAt: -1 });
+    
     res.status(200).send(conversations);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// NEW: Get conversations with user data populated
+export const getConversationsWithUsers = async (req, res, next) => {
+  try {
+    const conversations = await Conversation.find(
+      req.isSeller ? { sellerId: req.userId } : { buyerId: req.userId }
+    ).sort({ updatedAt: -1 });
+
+    // Populate user information for each conversation
+    const conversationsWithUsers = await Promise.all(
+      conversations.map(async (conversation) => {
+        const sellerInfo = await User.findById(conversation.sellerId).select('username email img country');
+        const buyerInfo = await User.findById(conversation.buyerId).select('username email img country');
+        
+        return {
+          ...conversation.toObject(),
+          sellerInfo,
+          buyerInfo
+        };
+      })
+    );
+
+    res.status(200).send(conversationsWithUsers);
   } catch (err) {
     next(err);
   }

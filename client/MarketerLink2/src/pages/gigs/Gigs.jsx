@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react"
 import GigCard from "../../components/gigCard/GigCard"
 import { useQuery } from "@tanstack/react-query"
@@ -13,13 +12,29 @@ function Gigs() {
   const maxRef = useRef()
 
   const { search } = useLocation()
+  const currentUser = JSON.parse(localStorage.getItem("currentUser"))
 
+  // Fetch gigs
   const { isLoading, error, data, refetch } = useQuery({
     queryKey: ["gigs"],
     queryFn: () =>
       newRequest
         .get(`/gigs${search}?min=${minRef.current.value}&max=${maxRef.current.value}&sort=${sort}`)
         .then((res) => res.data),
+  })
+
+  // Fetch user's applications to determine status
+  const { data: userApplications } = useQuery({
+    queryKey: ["userApplications"],
+    queryFn: () => newRequest.get("/applications").then((res) => res.data),
+    enabled: !!currentUser && !currentUser.isSeller, // Only fetch for marketers
+  })
+
+  // Fetch conversations to check for active chats
+  const { data: conversations } = useQuery({
+    queryKey: ["conversations"],
+    queryFn: () => newRequest.get("/conversations").then((res) => res.data),
+    enabled: !!currentUser,
   })
 
   const reSort = (type) => {
@@ -35,6 +50,57 @@ function Gigs() {
     refetch()
   }
 
+  // Filter and enhance gigs based on user's application status
+  const getFilteredGigs = () => {
+    if (!data) return []
+
+    return data
+      .map((gig) => {
+        // Find user's application for this gig
+        const userApplication = userApplications?.find(app => 
+          (app.gigId?._id === gig._id || app.gigId === gig._id)
+        )
+
+        // Find conversation for this gig
+        const conversation = conversations?.find(conv => 
+          (currentUser.isSeller && conv.buyerId === gig.userId && conv.sellerId === currentUser._id) ||
+          (!currentUser.isSeller && conv.sellerId === gig.userId && conv.buyerId === currentUser._id)
+        )
+
+        // Enhanced gig with status information
+        const enhancedGig = {
+          ...gig,
+          userApplicationStatus: userApplication?.status || null,
+          hasUserApplied: !!userApplication,
+          conversationId: conversation?.id || null,
+          isInProgress: userApplication?.status === 'accepted',
+          isCompleted: gig.status === 'completed'
+        }
+
+        return enhancedGig
+      })
+      .filter((gig) => {
+        // Filter out rejected applications entirely for marketers
+        if (!currentUser.isSeller && gig.userApplicationStatus === 'rejected') {
+          return false
+        }
+        
+        // For sellers, show all their own gigs
+        if (currentUser.isSeller && gig.userId === currentUser._id) {
+          return true
+        }
+        
+        // For marketers, don't show their own gigs (if they somehow have any)
+        if (!currentUser.isSeller && gig.userId === currentUser._id) {
+          return false
+        }
+
+        return true
+      })
+  }
+
+  const filteredGigs = getFilteredGigs()
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -45,8 +111,8 @@ function Gigs() {
             <span className="mx-2">›</span>
             <span>Branding & Growth</span>
           </nav>
-<h1 className="text-3xl font-bold text-gray-900 mb-2">Digital Marketing Experts</h1>
-<p className="text-gray-600">Connect with skilled marketers ready to grow your business and boost your sales</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Digital Marketing Experts</h1>
+          <p className="text-gray-600">Connect with skilled marketers ready to grow your business and boost your sales</p>
         </div>
 
         {/* Filters and Search */}
@@ -141,8 +207,19 @@ function Gigs() {
               <div className="text-red-500 text-lg font-medium mb-2">Something went wrong!</div>
               <p className="text-gray-600">Please try refreshing the page</p>
             </div>
-          ) : data && data.length > 0 ? (
-            data.map((gig) => <GigCard key={gig._id} item={gig} />)
+          ) : filteredGigs && filteredGigs.length > 0 ? (
+            filteredGigs.map((gig) => (
+              <GigCard 
+                key={gig._id} 
+                item={gig} 
+                hasApplied={gig.hasUserApplied}
+                applicationStatus={gig.userApplicationStatus}
+                conversationId={gig.conversationId}
+                isInProgress={gig.isInProgress}
+                isCompleted={gig.isCompleted}
+                currentUser={currentUser}
+              />
+            ))
           ) : (
             <div className="col-span-full text-center py-12">
               <div className="text-gray-500 text-lg font-medium mb-2">No gigs found</div>

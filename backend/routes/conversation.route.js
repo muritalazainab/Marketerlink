@@ -4,6 +4,7 @@ import {
   getConversations,
   getSingleConversation,
   updateConversation,
+  getConversationsWithUsers,
 } from "../controllers/conversation.controller.js";
 import { verifyToken } from "../middleware/jwt.js";
 
@@ -13,5 +14,5 @@ router.get("/", verifyToken, getConversations);
 router.post("/", verifyToken, createConversation);
 router.get("/single/:id", verifyToken, getSingleConversation);
 router.put("/:id", verifyToken, updateConversation);
-
+router.get("/with-users", verifyToken, getConversationsWithUsers);
 export default router;
