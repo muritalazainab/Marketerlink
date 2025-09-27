@@ -1,5 +1,5 @@
 import express from "express";
-import { verifyToken } from "../middleware/jwt.js";
+import  verifyToken  from "../middleware/jwt.js";
 import { 
   createApplication, 
   getApplications, 
@@ -9,8 +9,10 @@ import {
   rejectApplication,       
   getApplicationsForGig      
 } from "../controllers/application.controller.js";
+import { updateApplicationStatus } from "../controllers/application.controller.js";
 
 const router = express.Router();
+router.put('/:id/status', verifyToken, updateApplicationStatus);
 
 
 router.post('/', verifyToken, createApplication);

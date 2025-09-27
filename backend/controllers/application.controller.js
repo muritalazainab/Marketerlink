@@ -173,8 +173,12 @@ export const acceptApplication = async (req, res, next) => {
       return next(createError(404, "Application not found"));
     }
 
-    // Verify the gig belongs to the current user
-    if (application.gigId.userId !== req.userId) {
+    // Verify the gig belongs to the current user (compare strings)
+    const gigOwnerId = application.gigId && application.gigId.userId
+      ? application.gigId.userId.toString()
+      : null;
+
+    if (!gigOwnerId || gigOwnerId !== req.userId) {
       return next(createError(403, "You can only accept applications for your own gigs"));
     }
 
@@ -197,18 +201,17 @@ export const acceptApplication = async (req, res, next) => {
       { status: 'rejected' }
     );
 
-    // ADDED: Create conversation between seller and marketer
-    const conversationId = req.userId + application.marketerId; // Seller + Marketer
-    
+    // Create conversation between seller and marketer (if not exists)
+    const conversationId = req.userId + application.marketerId.toString();
+
     try {
-      // Check if conversation already exists
       let conversation = await Conversation.findOne({ id: conversationId });
-      
+
       if (!conversation) {
         conversation = new Conversation({
           id: conversationId,
-          sellerId: req.userId, // The gig owner (seller)
-          buyerId: application.marketerId, // The marketer
+          sellerId: req.userId,
+          buyerId: application.marketerId,
           readBySeller: true,
           readByBuyer: false,
           lastMessage: `Your application for "${application.gigId.title}" has been accepted! Let's discuss the project details.`
@@ -216,7 +219,7 @@ export const acceptApplication = async (req, res, next) => {
         await conversation.save();
       }
 
-      // ADDED: Create notification for marketer
+      // Create notifications
       const marketerNotification = new Notification({
         userId: application.marketerId,
         type: 'application_accepted',
@@ -228,7 +231,6 @@ export const acceptApplication = async (req, res, next) => {
       });
       await marketerNotification.save();
 
-      // ADDED: Create notification for seller (optional)
       const sellerNotification = new Notification({
         userId: req.userId,
         type: 'application_decision_made',
@@ -236,23 +238,23 @@ export const acceptApplication = async (req, res, next) => {
         message: `You accepted an application for "${application.gigId.title}". You can now start chatting with the marketer.`,
         relatedId: application._id,
         conversationId: conversationId,
-        isRead: true // Mark as read since they initiated the action
+        isRead: true
       });
       await sellerNotification.save();
 
     } catch (convError) {
       console.log("Failed to create conversation or notifications:", convError);
-      // Don't fail the whole request if conversation creation fails
+      // continue — do not fail the whole request
     }
 
-    // Manually populate response
+    // Prepare response: populate marketer user so frontend has user data
     const updatedApplication = await Application.findById(id).populate('gigId');
     const marketerUser = await User.findById(updatedApplication.marketerId);
-    
+
     const responseData = {
       ...updatedApplication.toObject(),
       marketerId: marketerUser,
-      conversationId: conversationId // ADDED: Return conversation ID
+      conversationId: conversationId
     };
 
     res.status(200).json(responseData);
@@ -260,6 +262,7 @@ export const acceptApplication = async (req, res, next) => {
     next(err);
   }
 };
+
 
 // UPDATED: Reject an application - NOW CREATES NOTIFICATION
 export const rejectApplication = async (req, res, next) => {
@@ -313,5 +316,30 @@ export const rejectApplication = async (req, res, next) => {
     res.status(200).json(responseData);
   } catch (err) {
     next(err);
+  }
+};
+export const updateApplicationStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    const application = await Application.findById(id);
+    if (!application) {
+      return next(createError(404, "Application not found"));
+    }
+
+    // Update status and add timestamp
+    application.status = status;
+    if (status === 'in_progress') {
+      application.startDate = new Date();
+    }
+    if (notes) {
+      application.projectNotes = notes;
+    }
+
+    await application.save();
+    res.status(200).json(application);
+  } catch (error) {
+    next(error);
   }
 };

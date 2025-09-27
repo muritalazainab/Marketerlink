@@ -10,7 +10,8 @@ import {
   MessageCircle,
   Eye,
   MapPin,
-  Heart
+  Heart,
+  FileText
 } from 'lucide-react';
 
 const GigCard = ({ 
@@ -159,7 +160,7 @@ const GigCard = ({
                 style={{ backgroundColor: '#2563EB' }}
               >
                 <Eye className="w-4 h-4" />
-                View & Apply
+                View 
               </Link>
               <button className="w-10 h-10 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
                 <MessageCircle className="w-4 h-4 text-gray-600" />
@@ -181,26 +182,34 @@ const GigCard = ({
                     Project Active
                   </div>
                   <div className="flex gap-2">
-                    <Link
+                    {/* <Link
                       to={`/gig/${item?._id}`}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                     >
                       <Eye className="w-4 h-4" />
                       View Project
-                    </Link>
-                    <Link
+                    </Link> */}
+                      
+  {/* <Link
+    to={`/project/${item._id}/submit`}
+    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+  >
+    <FileText className="w-4 h-4" />
+    Submit Work
+  </Link> */}
+                    {/* <Link
                       to="/messages"
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
                       style={{ backgroundColor: '#F97316' }}
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Chat
-                    </Link>
+                      Chat with Client
+                    </Link> */}
                   </div>
                 </div>
               )}
               
-              {!applicationStatus && (
+              {/* {!applicationStatus && (
                 <Link
                   to={`/gig/${item?._id}`}
                   className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
@@ -208,7 +217,7 @@ const GigCard = ({
                   <Eye className="w-4 h-4" />
                   View
                 </Link>
-              )}
+              )} */}
             </div>
           )}
         </div>

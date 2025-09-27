@@ -4,8 +4,10 @@ import { Link } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react"
 import newRequest from "../../../utils/newRequest"
 import { useNavigate } from "react-router-dom"
+import { useToast } from '../../components/ToastNotification';
 
 function Login() {
+   const toast = useToast();
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState(null)
@@ -35,14 +37,14 @@ function Login() {
       if (res.data.token) {
         localStorage.setItem("token", res.data.token)
       }
-      
+       toast.success(`Welcome back, ${user.username}!`);
       if (user.isSeller) {
         navigate("/seller-dashboard")
       } else {
         navigate("/marketer-dashboard")
       }
     } catch (err) {
-      setError(err.response?.data || "Something went wrong")
+      toast.error(err.response?.data || "Login failed. Please try again.");
     } finally {
       setIsLoading(false)
     }

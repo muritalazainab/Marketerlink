@@ -1,10 +1,13 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { Plus, X, Save, ArrowLeft } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import newRequest from "../../../utils/newRequest"
+import { useToast } from '../../components/ToastNotification';
+
 
 const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }) => {
+  const navigate = useNavigate()
+  const toast = useToast();
   const [formData, setFormData] = useState({
     fullName: "",
     title: "",
@@ -114,6 +117,18 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
     }))
   }
 
+  // Helper function to determine dashboard route
+  const getDashboardRoute = () => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+    if (!currentUser) return '/login'
+    
+    if (currentUser.isSeller && currentUser.role !== "marketer") {
+      return '/seller-dashboard'
+    } else {
+      return '/marketer-dashboard'
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
@@ -121,13 +136,13 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
 
     // Validate required fields
     if (!formData.fullName.trim() || !formData.title.trim()) {
-      setError("Full name and professional title are required.")
+      toast.warning("Full name and professional title are required.");
       setIsLoading(false)
       return
     }
 
     try {
-      // Get current user to extract userId
+      // Get current user to verify they're logged in
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
       if (!currentUser) {
         setError("User not found. Please login again.")
@@ -135,9 +150,7 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
         return
       }
 
-      // Prepare complete profile data
       const profileData = {
-        userId: currentUser.id || currentUser._id, // Handle different ID formats
         fullName: formData.fullName,
         title: formData.title,
         bio: formData.bio,
@@ -156,12 +169,19 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
       const response = await newRequest.post("/profiles", profileData)
       console.log("Profile save response:", response.data)
 
-      setSuccess(true)
+
+      toast.success("Profile saved successfully!")
+      // Redirect after showing success message
       setTimeout(() => {
         if (isModal && onClose) {
           onClose()
+         
+        } else {
+         
+          navigate(getDashboardRoute())
         }
       }, 1500)
+
     } catch (err) {
       console.error("Profile save error:", err)
       let errorMessage = "Failed to save profile. Please try again."
@@ -172,8 +192,9 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
         errorMessage = typeof err.response.data === 'string' ? err.response.data : errorMessage
       }
       
-      setError(errorMessage)
-    } finally {
+  
+      toast.error(errorMessage)
+        } finally {
       setIsLoading(false)
     }
   }
@@ -182,8 +203,8 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
     if (isModal && onClose) {
       onClose()
     } else {
-      // In real implementation, use navigate(-1)
-      console.log("Going back...")
+      // Navigate back to previous page or dashboard
+      navigate(-1)
     }
   }
 
@@ -195,7 +216,8 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
             <Save className="w-8 h-8 text-green-600" />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Profile Saved!</h2>
-          <p className="text-gray-600">Your profile has been successfully created.</p>
+          <p className="text-gray-600 mb-4">Your profile has been successfully created.</p>
+          <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
         </div>
       </div>
     )
@@ -410,7 +432,7 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
                   <button
                     type="button"
                     onClick={addPortfolioItem}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -440,7 +462,7 @@ const ProfileForm = ({ isModal = false, onClose = null, existingProfile = null }
 
             {/* Social Links */}
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibent text-gray-900 mb-4">Social Links</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Social Links</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(formData.socialLinks).map(([platform, value]) => (
                   <div key={platform}>

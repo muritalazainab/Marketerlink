@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { X, Send, DollarSign } from "lucide-react"
+import { useToast } from '../../components/ToastNotification';
 
 const ApplicationModal = ({ gig, onClose, onSubmit }) => {
+    const toast = useToast();
   const [proposal, setProposal] = useState("")
   const [bidAmount, setBidAmount] = useState(gig.price)
   const [deliveryTime, setDeliveryTime] = useState(gig.deliveryTime || 7)
@@ -12,7 +14,7 @@ const ApplicationModal = ({ gig, onClose, onSubmit }) => {
     e.preventDefault()
 
     if (!proposal.trim()) {
-      alert("Please write a proposal")
+            toast.warning("Please write a proposal"); 
       return
     }
 
@@ -29,11 +31,12 @@ const ApplicationModal = ({ gig, onClose, onSubmit }) => {
     try {
       await onSubmit(applicationData)
       onClose()
+
+      toast.success("Application submitted successfully!"); 
          navigate("/marketer-dashboard")
     } catch (error) {
       console.error("Failed to submit application:", error)
-      alert("Failed to submit application. Please try again.")
-    } finally {
+      toast.error("Failed to submit application. Please try again.");     } finally {
       setIsSubmitting(false)
     }
   }

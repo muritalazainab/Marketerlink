@@ -7,10 +7,11 @@ import {
   fundGig,
   getMyGigs
 } from "../controllers/gig.controller.js";
-import { verifyToken } from "../middleware/jwt.js";
+import  verifyToken from "../middleware/jwt.js";
 import Gig from "../models/gig.model.js";
 
 const router = express.Router();
+// router.put("/:id/complete", verifyToken, completeProject);
 
 // Debug routes (temporary)
 router.get("/debug/me", verifyToken, (req, res) => {

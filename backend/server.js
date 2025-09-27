@@ -13,7 +13,10 @@ import authRoute from "./routes/auth.route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import notificationRoutes from "./routes/notification.route.js";
-
+import projectsRoutes from './routes/projects.js';
+import './utils/cronJobs.js';
+import workSubmissionRoutes from './routes/workSubmission.routes.js';
+import platformEarningsRoutes from './routes/platformEarnings.routes.js';
 
 
 const app = express();
@@ -30,7 +33,9 @@ try {
 };
 app.use(cors({ 
   origin: ["http://localhost:5173", "https://marketer-link2-pbk84gdkf-zmuritala8-2371s-projects.vercel.app"], 
-  credentials: true 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -44,6 +49,13 @@ app.use("/api/conversations", conversationRoute);
 app.use("/api/messages", messageRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/notifications", notificationRoutes);
+
+app.use('/api/projects', projectsRoutes);
+app.use('/api/work-submissions', workSubmissionRoutes);
+app.use('/api/platform-earnings', platformEarningsRoutes);
+
+
+app.use('/uploads', express.static('uploads'));
 
 
 app.use((err, req, res, next) => {

@@ -190,3 +190,25 @@ export const getMyGigs = async (req, res, next) => {
     next(err);
   }
 };
+export const completeProject = async (req, res, next) => {
+  try {
+    const { id } = req.params; // gig ID
+
+    const gig = await Gig.findById(id);
+    if (!gig) {
+      return next(createError(404, "Gig not found"));
+    }
+
+    if (gig.userId !== req.userId) {
+      return next(createError(403, "You can only complete your own gigs"));
+    }
+
+    // Update gig status to completed
+    gig.status = 'completed';
+    await gig.save();
+
+    res.status(200).json({ message: "Project marked as completed", gig });
+  } catch (error) {
+    next(error);
+  }
+};

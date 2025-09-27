@@ -1,6 +1,6 @@
 // routes/profiles.js
 import express from "express";
-import { verifyToken } from "../middleware/jwt.js";
+import verifyToken  from "../middleware/jwt.js";
 import {
   createOrUpdateProfile,
   getProfile,

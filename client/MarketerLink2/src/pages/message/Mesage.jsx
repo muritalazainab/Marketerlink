@@ -35,8 +35,8 @@ const Message = () => {
     <div className="flex justify-center">
       <div className="w-[1200px] m-12">
         {/* Breadcrumbs */}
-        <span className="font-light text-[13px] text-gray-600">
-          <Link to="/messages">Messages</Link> &gt; John Doe &gt;
+        <span className="font-medium text-[1.5rem] text-blue-800">
+          <Link to="/messages">Messages</Link> 
         </span>
 
         {/* Messages */}
@@ -63,7 +63,7 @@ const Message = () => {
                 <p
                   className={`max-w-[500px] p-5 font-light ${
                     m.userId === currentUser._id
-                      ? "rounded-[20px_0px_20px_20px] bg-royalblue text-white"
+                      ? "rounded-[20px_0px_20px_20px] bg-royalblue text-blue"
                       : "rounded-[0px_20px_20px_20px] bg-gray-100 text-gray-600"
                   }`}
                 >
@@ -89,7 +89,7 @@ const Message = () => {
           />
           <button
             type="submit"
-            className="bg-[#1dbf73] p-5 text-white font-medium rounded-lg w-[100px] cursor-pointer"
+            className="bg-blue-600 p-5 text-white font-medium rounded-lg w-[100px] cursor-pointer"
           >
             Send
           </button>

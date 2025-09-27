@@ -1,5 +1,3 @@
-
-
 import { useReducer, useState } from "react"
 import { Upload, Plus, X, CreditCard, ArrowLeft, Image, FileText, DollarSign, Clock, RefreshCw } from "lucide-react"
 import { gigReducer, INITIAL_STATE } from "../../reducers/gigReducer"
@@ -9,6 +7,7 @@ import newRequest from "../../../utils/newRequest"
 import { useNavigate } from "react-router-dom"
 import { loadStripe } from "@stripe/stripe-js"
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import { useToast } from '../../components/ToastNotification';
 
 const stripePromise = loadStripe(
   "pk_test_51PqYk2KUYKxDqxIbYXbpp4KvQiSRSBEY2F7ISEHqCTsrP0mrKWhJ8mazcIOljedKjzH9ckSRKZvCMiyxW1R2VVgq003VmA2wVu",
@@ -42,7 +41,7 @@ const PaymentForm = ({ gigData, onPaymentSuccess, onCancel, isLoading }) => {
       })
 
       if (error) {
-        setPaymentError(error.message)
+    toast.error(error.message)
         await newRequest.delete(`/gigs/${gig._id}`)
       } else if (paymentIntent.status === "succeeded") {
         await newRequest.put(`/gigs/${gig._id}/fund`, {
@@ -106,14 +105,14 @@ const PaymentForm = ({ gigData, onPaymentSuccess, onCancel, isLoading }) => {
                 type="button"
                 onClick={onCancel}
                 disabled={paymentLoading}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!stripe || paymentLoading}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
               >
                 {paymentLoading ? "Processing..." : `Pay $${gigData.price}`}
               </button>
@@ -126,11 +125,16 @@ const PaymentForm = ({ gigData, onPaymentSuccess, onCancel, isLoading }) => {
 }
 
 const Add = () => {
+  const toast = useToast();
   const [singleFile, setSingleFile] = useState(undefined)
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [gigData, setGigData] = useState(null)
+  
+  // New state for image previews
+  const [coverPreview, setCoverPreview] = useState(null)
+  const [galleryPreviews, setGalleryPreviews] = useState([])
 
   const [state, dispatch] = useReducer(gigReducer, INITIAL_STATE)
 
@@ -153,6 +157,58 @@ const Add = () => {
     e.target[0].value = ""
   }
 
+  // Handle cover image selection and preview
+  const handleCoverChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setSingleFile(file)
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      setCoverPreview(previewUrl)
+    }
+  }
+
+  // Handle gallery images selection and preview
+  const handleGalleryChange = (e) => {
+    const selectedFiles = Array.from(e.target.files)
+    if (selectedFiles.length > 0) {
+      setFiles(selectedFiles)
+      
+      // Create preview URLs
+      const previewUrls = selectedFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file),
+        name: file.name
+      }))
+      setGalleryPreviews(previewUrls)
+    }
+  }
+
+  // Remove cover image
+  const removeCoverImage = () => {
+    setSingleFile(undefined)
+    if (coverPreview) {
+      URL.revokeObjectURL(coverPreview)
+      setCoverPreview(null)
+    }
+  }
+
+  // Remove gallery image
+  const removeGalleryImage = (index) => {
+    const newFiles = [...files]
+    const newPreviews = [...galleryPreviews]
+    
+    // Revoke URL to prevent memory leaks
+    URL.revokeObjectURL(newPreviews[index].url)
+    
+    newFiles.splice(index, 1)
+    newPreviews.splice(index, 1)
+    
+    setFiles(newFiles)
+    setGalleryPreviews(newPreviews)
+  }
+
   const handleUpload = async () => {
     setUploading(true)
     try {
@@ -165,6 +221,15 @@ const Add = () => {
       )
       setUploading(false)
       dispatch({ type: "ADD_IMAGES", payload: { cover, images } })
+      
+      // Clean up preview URLs
+      // if (coverPreview) {
+      //   URL.revokeObjectURL(coverPreview)
+      //   setCoverPreview(null)
+      // }
+      // galleryPreviews.forEach(preview => URL.revokeObjectURL(preview.url))
+      // setGalleryPreviews([])
+      
     } catch (err) {
       console.log(err)
       setUploading(false)
@@ -175,12 +240,13 @@ const Add = () => {
     e.preventDefault()
 
     if (!state.title || !state.desc || !state.price) {
-      alert("Please fill in all required fields")
+      toast.warning("Please fill in all required fields");
       return
     }
 
     if (!state.cover) {
-      alert("Please upload a cover image")
+       toast.warning("Please upload a cover image");
+
       return
     }
 
@@ -191,7 +257,7 @@ const Add = () => {
   const handlePaymentSuccess = (gig) => {
     setShowPayment(false)
     queryClient.invalidateQueries(["myGigs"])
-    alert("Gig created successfully! Your payment is held in escrow.")
+    toast.success("Gig created successfully! Your payment is held in escrow.")
     navigate("/seller-dashboard")
   }
 
@@ -209,7 +275,7 @@ const Add = () => {
             <div className="flex items-center gap-4 mb-4">
               <button 
                 onClick={() => navigate(-1)} 
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-200 rounded-lg"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
@@ -251,14 +317,15 @@ const Add = () => {
                       name="cat" 
                       onChange={handleChange} 
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    ><option value="social">Social Media Marketing</option>
-<option value="seo">SEO & Web Traffic</option>
-<option value="ads">Paid Ads (Google, Facebook, TikTok)</option>
-<option value="email">Email Marketing</option>
-<option value="content">Content Marketing</option>
-<option value="influencer">Influencer Marketing</option>
-<option value="affiliate">Affiliate & Referral Marketing</option>
-<option value="strategy">Marketing Strategy & Research</option>
+                    >
+                      <option value="social">Social Media Marketing</option>
+                      <option value="seo">SEO & Web Traffic</option>
+                      <option value="ads">Paid Ads (Google, Facebook, TikTok)</option>
+                      <option value="email">Email Marketing</option>
+                      <option value="content">Content Marketing</option>
+                      <option value="influencer">Influencer Marketing</option>
+                      <option value="affiliate">Affiliate & Referral Marketing</option>
+                      <option value="strategy">Marketing Strategy & Research</option>
                     </select>
                   </div>
 
@@ -277,7 +344,7 @@ const Add = () => {
                 </div>
               </div>
 
-              {/* Media Upload */}
+              {/* Media Upload with Previews */}
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
                   <Image className="w-5 h-5 text-blue-600" />
@@ -285,38 +352,86 @@ const Add = () => {
                 </h2>
 
                 <div className="space-y-5">
+                  {/* Cover Image */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Cover Image *
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
-                      <input
-                        type="file"
-                        onChange={(e) => setSingleFile(e.target.files[0])}
-                        className="hidden"
-                        id="cover-upload"
-                        accept="image/*"
-                      />
-                      <label
-                        htmlFor="cover-upload"
-                        className="cursor-pointer flex flex-col items-center text-center"
-                      >
-                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-600">Click to upload cover image</span>
-                        <span className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</span>
-                      </label>
-                    </div>
+                    
+                    {/* Cover Image Preview */}
+                    {coverPreview ? (
+                      <div className="relative">
+                        <img 
+                          src={coverPreview} 
+                          alt="Cover preview" 
+                          className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                        />
+                        <button
+                          onClick={removeCoverImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                          Cover Image
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                        <input
+                          type="file"
+                          onChange={handleCoverChange}
+                          className="hidden"
+                          id="cover-upload"
+                          accept="image/*"
+                        />
+                        <label
+                          htmlFor="cover-upload"
+                          className="cursor-pointer flex flex-col items-center text-center"
+                        >
+                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                          <span className="text-sm text-gray-600">Click to upload cover image</span>
+                          <span className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
 
+                  {/* Gallery Images */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Gallery Images (Optional)
                     </label>
+                    
+                    {/* Gallery Previews */}
+                    {galleryPreviews.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                        {galleryPreviews.map((preview, index) => (
+                          <div key={index} className="relative">
+                            <img 
+                              src={preview.url} 
+                              alt={`Gallery preview ${index + 1}`} 
+                              className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                            />
+                            <button
+                              onClick={() => removeGalleryImage(index)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                            <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white px-1 py-0.5 rounded text-xs truncate max-w-[80%]">
+                              {preview.name}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
                       <input
                         type="file"
                         multiple
-                        onChange={(e) => setFiles(e.target.files)}
+                        onChange={handleGalleryChange}
                         className="hidden"
                         id="gallery-upload"
                         accept="image/*"
@@ -335,12 +450,12 @@ const Add = () => {
                   <button
                     onClick={handleUpload}
                     disabled={uploading || (!singleFile && !files.length)}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     {uploading ? (
                       <span className="flex items-center justify-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        Uploading...
+                        Uploading Images...
                       </span>
                     ) : (
                       "Upload Images"
@@ -428,11 +543,11 @@ const Add = () => {
                     <input
                       type="text"
                       placeholder="e.g., Responsive design, SEO optimization"
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button
                       type="submit"
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                     >
                       <Plus className="w-4 h-4" />
                     </button>

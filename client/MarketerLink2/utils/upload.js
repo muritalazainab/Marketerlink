@@ -9,11 +9,13 @@ const upload = async (file) => {
     const res = await axios.post(
      "https://api.cloudinary.com/v1_1/djhamxmxv/image/upload", data);
 
-    const { url } = res.data;
-    return url;
+     const { secure_url } = res.data;
+  return secure_url;
   } catch (err) {
-    console.log(err);
+    console.error("Cloudinary upload error:", err);
+    throw err;
   }
 };
+
 
 export default upload;

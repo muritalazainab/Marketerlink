@@ -14,11 +14,16 @@ import {
   AlertCircle,
   Star,
   X,
+  ClipboardCheck,
+  BarChart3,
 } from "lucide-react"
 import newRequest from "../../../utils/newRequest"
 import GigCard from "../gigCard/GigCard"
+import { useToast } from '../../components/ToastNotification';
 
 const SellerDashboard = () => {
+    const toast = useToast();
+
   const [viewingProfile, setViewingProfile] = useState(null)
   const [activeTab, setActiveTab] = useState("gigs")
   const queryClient = useQueryClient()
@@ -50,7 +55,7 @@ const SellerDashboard = () => {
   // Accept application mutation with conversation creation
   const acceptMutation = useMutation({
     mutationFn: async (applicationId) => {
-      // First accept the application
+      
       const response = await newRequest.put(`/applications/${applicationId}/accept`);
       
       // Get the application details to create conversation
@@ -73,7 +78,7 @@ const SellerDashboard = () => {
       queryClient.invalidateQueries(["gigApplications"])
       queryClient.invalidateQueries(["conversations"])
       queryClient.invalidateQueries(["myGigs"])
-      alert("Application accepted! You can now message the marketer.")
+      toast.success("Application accepted! You can now message the marketer."); // Replace alert
     },
   })
 
@@ -83,6 +88,30 @@ const SellerDashboard = () => {
       queryClient.invalidateQueries(["gigApplications"])
     },
   })
+  
+  const handleStartConversation = async (marketerId) => {
+  try {
+    await newRequest.post("/conversations", { to: marketerId });
+    
+    // Navigate to messages
+    navigate("/messages");
+    
+      toast.success("Conversation started! You can now message the marketer."); // Replace alert
+  } catch (error) {
+    console.error("Error starting conversation:", error);
+    
+    // If conversation already exists, just navigate to messages
+    if (error.response?.status === 409 || error.response?.data?.message?.includes("already exists")) {
+      navigate("/messages");
+              toast.info("Conversation already exists. Redirecting to messages."); // Replace alert
+
+    } else {
+        toast.error("Error starting conversation. Please try again."); // Replace alert
+    }
+  }
+}
+
+
 
   useEffect(() => {
     if (sessionStorage.getItem("isLoggingOut")) {
@@ -329,12 +358,6 @@ const SellerDashboard = () => {
               >
                 Close
               </button>
-              <Link 
-                to="/messages"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Send Message
-              </Link>
             </div>
           </div>
         </div>
@@ -346,8 +369,34 @@ const SellerDashboard = () => {
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Seller Dashboard</h1>
-        <p className="text-gray-600">Welcome back, {currentUser?.username}</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Seller Dashboard</h1>
+            <p className="text-gray-600">Welcome back, {currentUser?.username}</p>
+          </div>
+          
+          {/* Navigation Buttons */}
+          <div className="flex gap-3">
+            <Link 
+              to="/work-review"
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              Review Work
+            </Link>
+            
+            {/* Admin-only Platform Earnings button */}
+            {currentUser?.isAdmin && (
+              <Link 
+                to="/platform-earnings"
+                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Platform Earnings
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -473,126 +522,126 @@ const SellerDashboard = () => {
       )}
 
       {/* Applications Tab */}
-      {activeTab === "applications" && (
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Applications</h2>
-              <p className="text-sm text-gray-600">Review applicants and manage projects</p>
+     {activeTab === "applications" && (
+  <div className="bg-white rounded-lg shadow-md">
+    <div className="p-6 border-b border-gray-200">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-900">Applications</h2>
+        <p className="text-sm text-gray-600">Review applicants and manage projects</p>
+      </div>
+    </div>
+
+    {appsLoading ? (
+      <div className="p-6">Loading...</div>
+    ) : (
+      <div className="divide-y divide-gray-200">
+        {applications?.map((application) => (
+          <div key={application._id} className="p-6">
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <h3 className="font-medium text-gray-900">{application.gigId?.title}</h3>
+                <span className={`px-2 py-1 text-xs rounded-full ${getApplicationStatus(application.status)}`}>
+                  {application.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  {application.marketerId?.profilePicture ? (
+                    <img
+                      src={application.marketerId.profilePicture}
+                      alt={application.marketerId.username}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-gray-600" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900 mb-1">
+                    {application.marketerId?.fullName || application.marketerId?.username || "Unknown User"}
+                  </h4>
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                    <span>Bid: ${application.bidAmount}</span>
+                    <span>Delivery: {application.deliveryTime} days</span>
+                    <span>Applied: {new Date(application.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    <strong>Proposal:</strong> {application.proposal}
+                  </p>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <button
+                    onClick={() => showProfile(application.marketerId?._id || application.marketerId)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    View Profile
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons - UPDATED TO ALLOW MESSAGING WITHOUT ACCEPTANCE */}
+            <div className="flex gap-3">
+              {/* Message button - now available for all statuses */}
+              <button
+                onClick={() => handleStartConversation(application.marketerId?._id || application.marketerId)}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Message Marketer
+              </button>
+
+              {application.status === "pending" && (
+                <>
+                  <button
+                    onClick={() => handleAccept(application._id)}
+                    disabled={acceptMutation.isPending}
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleReject(application._id)}
+                    disabled={rejectMutation.isPending}
+                    className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject
+                  </button>
+                </>
+              )}
+
+              <Link
+                to={`/gig/${application.gigId?._id}`}
+                className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+              >
+                <Eye className="w-4 h-4" />
+                View Gig
+              </Link>
             </div>
           </div>
+        ))}
 
-          {appsLoading ? (
-            <div className="p-6">Loading...</div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {applications?.map((application) => (
-                <div key={application._id} className="p-6">
-                  <div className="mb-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="font-medium text-gray-900">{application.gigId?.title}</h3>
-                      <span className={`px-2 py-1 text-xs rounded-full ${getApplicationStatus(application.status)}`}>
-                        {application.status}
-                      </span>
-                    </div>
-                  </div>
+        {(!applications || applications.length === 0) && (
+          <div className="p-6 text-center text-gray-500">
+            <User className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <p>No applications yet</p>
+            <p className="text-sm">Applications will appear here when marketers apply to your gigs</p>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
 
-                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        {application.marketerId?.profilePicture ? (
-                          <img
-                            src={application.marketerId.profilePicture}
-                            alt={application.marketerId.username}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                            <User className="w-6 h-6 text-gray-600" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
-                          {application.marketerId?.fullName || application.marketerId?.username || "Unknown User"}
-                        </h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                          <span>Bid: ${application.bidAmount}</span>
-                          <span>Delivery: {application.deliveryTime} days</span>
-                          <span>Applied: {new Date(application.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <strong>Proposal:</strong> {application.proposal}
-                        </p>
-                      </div>
-
-                      <div className="flex-shrink-0">
-                        <button
-                          onClick={() => showProfile(application.marketerId?._id || application.marketerId)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
-                        >
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex gap-3">
-                    {application.status === "pending" && (
-                      <>
-                        <button
-                          onClick={() => handleAccept(application._id)}
-                          disabled={acceptMutation.isPending}
-                          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleReject(application._id)}
-                          disabled={rejectMutation.isPending}
-                          className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Reject
-                        </button>
-                      </>
-                    )}
-
-                    {application.status === "accepted" && (
-                      <Link
-                        to="/messages"
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        Chat with Marketer
-                      </Link>
-                    )}
-
-                    <Link
-                      to={`/gig/${application.gigId?._id}`}
-                      className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View Gig
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {(!applications || applications.length === 0) && (
-                <div className="p-6 text-center text-gray-500">
-                  <User className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No applications yet</p>
-                  <p className="text-sm">Applications will appear here when marketers apply to your gigs</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Profile Modal */}
       {viewingProfile && <ProfileModal marketer={viewingProfile} onClose={closeProfile} />}

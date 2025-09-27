@@ -17,7 +17,8 @@ import {
   Star,
   MapPin,
   Calendar,
-  Briefcase
+  Briefcase,
+  Upload
 } from 'lucide-react';
 import newRequest from '../../../utils/newRequest';
 import GigCard from '../gigCard/GigCard'; 
@@ -168,12 +169,11 @@ const MarketerDashboard = () => {
             </div>
             <div className="hidden md:flex items-center space-x-4">
               <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2563EB' }}>
-                <User className="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
         </div>
-
+        
         {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
@@ -240,9 +240,18 @@ const MarketerDashboard = () => {
                 <p className="text-sm font-medium text-gray-600">Earnings</p>
               </div>
             </div>
-            <div className="pt-4 border-t border-gray-100">
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">POTENTIAL INCOME</p>
-            </div>
+            <div className="text-right">
+  <p className="text-2xl font-bold text-gray-900">
+    ${myApplications?.filter(a => a.status === 'accepted')
+       .reduce((sum, app) => sum + app.bidAmount, 0) || 0}
+  </p>
+  <p className="text-sm font-medium text-gray-600">In Progress</p> {/* Changed from "Earnings" */}
+</div>
+
+
+<div className="pt-4 border-t border-gray-100">
+  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">ACTIVE PROJECT VALUE</p> {/* Changed from "POTENTIAL INCOME" */}
+</div>
           </div>
         </div>
 
@@ -305,11 +314,29 @@ const MarketerDashboard = () => {
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4" />
                   <span>Active Projects</span>
-                  <span className="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs font-medium">
+                  <span className="py-4 px-2 border-b-2 font-semibold text-sm transition-colors">
                     {myApplications?.filter(a => a.status === 'accepted').length || 0}
                   </span>
                 </div>
               </button>
+           
+     {myApplications?.filter(app => app.status === 'accepted').map((project) => (
+  <div key={project._id}>
+    {/* <h3>{project.gigId?.title}</h3> */}
+    <Link
+      to={`/project/${project._id}/submit`}
+      className="flex items-center gap-2 px-4 py-2 mt-6 text-gray rounded-lg transition-colors"
+    >
+      <FileText className="w-4 h-4" />
+      Submit Work
+    </Link>
+  </div>
+))}
+
+
+
+
+            
             </nav>
           </div>
 
@@ -451,19 +478,11 @@ const MarketerDashboard = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-3">
-                          <Link
-                            to={`/gig/${application.gigId?._id}`}
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                            View Gig Details
-                          </Link>
-                          
                           {application.status === 'accepted' && (
                             <Link
                               to="/messages"
                               className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:bg-green-700 transition-colors"
-                              style={{ backgroundColor: '#10B981' }}
+                              style={{ backgroundColor: '#2563EB' }}
                             >
                               <MessageCircle className="w-4 h-4" />
                               Start Conversation
@@ -512,11 +531,11 @@ const MarketerDashboard = () => {
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
                             <div className="flex items-center gap-2">
-                              <DollarSign className="w-4 h-4 text-green-600" />
-                              <span>Earning: <span className="font-semibold text-green-600">${project.bidAmount}</span></span>
+                              <DollarSign className="w-4 h-4 text-black-600" />
+                              <span>Earning: <span className="font-semibold text-black-600">${project.bidAmount}</span></span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-blue-600" />
+                              <Clock className="w-4 h-4 text-black-600" />
                               <span>Delivery: <span className="font-semibold">{project.deliveryTime} days</span></span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -527,31 +546,24 @@ const MarketerDashboard = () => {
                         </div>
                       </div>
                       
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                      <div className="bg-gray-50 border border-black-200 rounded-lg p-4 mb-6">
                         <div className="flex items-center gap-3 mb-2">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <p className="font-semibold text-green-800">Project Active</p>
+                          <CheckCircle className="w-5 h-5 text-black-600" />
+                          <p className="font-semibold text-black-800">Project Active</p>
                         </div>
-                        <p className="text-sm text-green-700">
+                        <p className="text-sm text-black-700">
                           You can start working on this project immediately. Communicate with your client and submit your work when ready.
                         </p>
                       </div>
                       
                       <div className="flex flex-wrap gap-3">
                         <Link
-                          to={`/gig/${project.gigId?._id}`}
-                          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          to="/messages"
+                          className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:bg-green-700 transition-colors"
                           style={{ backgroundColor: '#2563EB' }}
                         >
-                          <FileText className="w-4 h-4" />
-                          View Project Details
-                        </Link>
-                        <Link
-                          to="/messages"
-                          className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                        >
                           <MessageCircle className="w-4 h-4" />
-                          Message Client
+                          Start Conversation
                         </Link>
                       </div>
                     </div>
@@ -577,6 +589,142 @@ const MarketerDashboard = () => {
                           style={{ backgroundColor: '#2563EB' }}
                         >
                           Find New Projects
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Work Submission Tab */}
+            {activeTab === 'work-submission' && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">Submit Work</h2>
+                  <p className="text-gray-600">Upload and submit your completed work for active projects</p>
+                </div>
+                
+                <div className="space-y-4">
+                  {myApplications?.filter(a => a.status === 'accepted').map((project) => (
+                    <div key={project._id} className="bg-white border border-gray-100 rounded-xl p-6 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                            {project.gigId?.title}
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4" />
+                              <span>Payment: <span className="font-semibold">${project.bidAmount}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              <span>Deadline: <span className="font-semibold">{project.deliveryTime} days</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              <span>Started: <span className="font-semibold">{new Date(project.createdAt).toLocaleDateString()}</span></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Work Submission Form */}
+                      <div className="bg-gray-50 rounded-lg p-6 space-y-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-3">
+                            Upload Work Files
+                          </label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-sm text-gray-600 mb-2">
+                              Click to upload or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              PDF, DOC, DOCX, JPG, PNG up to 10MB
+                            </p>
+                            <input
+                              type="file"
+                              multiple
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-3">
+                            Work Description
+                          </label>
+                          <textarea
+                            rows={4}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                            style={{ '--tw-ring-color': '#2563EB' }}
+                            placeholder="Describe the work you've completed, key deliverables, and any additional notes for the client..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-3">
+                            Additional Notes (Optional)
+                          </label>
+                          <textarea
+                            rows={3}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                            style={{ '--tw-ring-color': '#2563EB' }}
+                            placeholder="Any additional comments, recommendations, or follow-up suggestions..."
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-4">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`complete-${project._id}`}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor={`complete-${project._id}`} className="text-sm text-gray-700">
+                              Mark this project as complete
+                            </label>
+                          </div>
+                          
+                          <div className="flex space-x-3">
+                            <button className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                              Save Draft
+                            </button>
+                            <button 
+                              className="px-6 py-2 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                              style={{ backgroundColor: '#2563EB' }}
+                            >
+                              Submit Work
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {(!myApplications || myApplications.filter(a => a.status === 'accepted').length === 0) && (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Upload className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No active projects to submit</h3>
+                      <p className="text-gray-500 mb-6">You need accepted projects before you can submit work</p>
+                      <div className="flex justify-center space-x-4">
+                        <button
+                          onClick={() => setActiveTab('applications')}
+                          className="inline-flex items-center px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Check Applications
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('available')}
+                          className="inline-flex items-center px-6 py-3 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          style={{ backgroundColor: '#2563EB' }}
+                        >
+                          Browse Available Gigs
                         </button>
                       </div>
                     </div>
