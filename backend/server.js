@@ -14,45 +14,47 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import notificationRoutes from "./routes/notification.route.js";
 import projectsRoutes from './routes/projects.js';
-import './utils/cronJobs.js';
 import workSubmissionRoutes from './routes/workSubmission.routes.js';
 import platformEarningsRoutes from './routes/platformEarnings.routes.js';
 
 const app = express();
 dotenv.config();
 
+// MongoDB connection optimized for serverless
 mongoose.set("strictQuery", true);
+let isConnected = false;
+
 const connect = async () => {
+  if (isConnected) {
+    console.log('Using existing MongoDB connection');
+    return;
+  }
+
   try {
-    await mongoose.connect(process.env.MONGO);
+    await mongoose.connect(process.env.MONGO, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      bufferCommands: false, // Disable mongoose buffering
+      bufferMaxEntries: 0 // Disable mongoose buffering
+    });
+    isConnected = true;
     console.log("Connected to mongoDB!");
   } catch (error) {
-    console.log(error);
+    console.log("MongoDB connection error:", error);
+    isConnected = false;
+    throw error;
   }
 };
 
-// CORS configuration with debugging
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'https://marketerlink.vercel.app',
-      'http://localhost:3000',      
-      'http://localhost:5173'
-    ];
-    
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    console.log('Request origin:', origin);
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log('Origin allowed:', origin);
-      callback(null, true);
-    } else {
-      console.log('Origin blocked:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// CORS configuration - simplified and fixed
+app.use(cors({
+  origin: [
+    'https://marketerlink.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -62,11 +64,22 @@ const corsOptions = {
     'Accept',
     'Origin'
   ],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-};
+  optionsSuccessStatus: 200
+}));
 
-app.use(cors(corsOptions));
+// Handle preflight requests explicitly
+app.options('*', cors());
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  try {
+    await connect();
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Additional middleware for debugging
 app.use((req, res, next) => {
@@ -74,8 +87,26 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Health check route (must be before other routes)
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Marketer Link API is running successfully on Vercel!',
+    cors: 'enabled',
+    timestamp: new Date().toISOString(),
+    allowedOrigins: [
+      'https://marketerlink.vercel.app',
+      'http://localhost:5173'
+    ]
+  });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ message: 'API endpoints are working!' });
+});
 
 // Routes
 app.use("/api/applications", applicationRoutes);
@@ -92,18 +123,15 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/work-submissions', workSubmissionRoutes);
 app.use('/api/platform-earnings', platformEarningsRoutes);
 
+// Static files (Note: Vercel handles static files differently)
 app.use('/uploads', express.static('uploads'));
 
-// Health check route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Marketer Link API is running successfully!',
-    cors: 'enabled',
-    allowedOrigins: [
-      'https://marketerlink.vercel.app',
-      'http://localhost:3000',      
-      'http://localhost:5173'
-    ]
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: 'Route not found',
+    path: req.path,
+    method: req.method
   });
 });
 
@@ -113,16 +141,22 @@ app.use((err, req, res, next) => {
   const errorMessage = err.message || "Something went wrong!";
   
   console.error('Error:', errorMessage);
+  console.error('Stack:', err.stack);
   return res.status(errorStatus).json({ error: errorMessage });
 });
 
-const PORT = process.env.PORT || 8800;
-app.listen(PORT, () => {
-  connect();
-  console.log(`Backend server is running on port ${PORT}!`);
-  console.log('CORS enabled for origins:', [
-    'https://marketerlink.vercel.app',
-    'http://localhost:3000',      
-    'http://localhost:5173'
-  ]);
-});
+// Export for Vercel
+export default app;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 8800;
+  app.listen(PORT, async () => {
+    await connect();
+    console.log(`Backend server is running on port ${PORT}!`);
+    console.log('CORS enabled for origins:', [
+      'https://marketerlink.vercel.app',
+      'http://localhost:5173'
+    ]);
+  });
+}

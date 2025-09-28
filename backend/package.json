@@ -4,7 +4,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "nodemon server.js",
+    "dev": "nodemon index.js",
+    "build": "echo 'No build step needed'"
   },
   "keywords": [],
   "author": "",
