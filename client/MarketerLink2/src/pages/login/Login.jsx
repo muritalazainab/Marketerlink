@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom"
 import { useToast } from '../../components/ToastNotification';
 
 function Login() {
-   const toast = useToast();
+  const toast = useToast();
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState(null)
@@ -30,21 +30,40 @@ function Login() {
     setError(null)
     
     try {
+      console.log('Attempting login with:', { username }); // Debug log
+      
       const res = await newRequest.post("/auth/login", { username, password })
       const user = res.data
 
+      console.log('Login successful, user data:', user); // Debug log
+
+      // Store user data and token
       localStorage.setItem("currentUser", JSON.stringify(user))
       if (res.data.token) {
         localStorage.setItem("token", res.data.token)
       }
-       toast.success(`Welcome back, ${user.username}!`);
+
+      // ✅ REFRESH NAVBAR IMMEDIATELY
+      if (window.refreshNavbarUser) {
+        console.log('Refreshing navbar after login'); // Debug log
+        window.refreshNavbarUser();
+      } else {
+        console.warn('window.refreshNavbarUser not available'); // Debug log
+      }
+
+      toast.success(`Welcome back, ${user.username}!`);
+      
+      // Navigate based on user type
       if (user.isSeller) {
         navigate("/seller-dashboard")
       } else {
         navigate("/marketer-dashboard")
       }
     } catch (err) {
-      toast.error(err.response?.data || "Login failed. Please try again.");
+      console.error('Login error:', err); // Debug log
+      const errorMessage = err.response?.data || "Login failed. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false)
     }

@@ -51,87 +51,113 @@ export default function Register() {
     navigate("/marketer-dashboard");
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    // ensure country (and required fields) exist before sending
-    if (!user.username || !user.email || !user.password || !user.country) {
-      setError('Please fill in username, email, password and country.');
-      setIsLoading(false);
-      return;
-    }
+    try {
+      console.log('Attempting registration with:', { username: user.username, email: user.email });
 
-    // upload file (if one chosen) — upload(file) should return a URL string or throw
-    let imgUrl = '';
-    if (file) {
-      try {
-        imgUrl = await upload(file);
-      } catch (uploadErr) {
-        console.warn('Upload failed, proceeding without image:', uploadErr);
-        imgUrl = '';
+      // Validate required fields
+      if (!user.username || !user.email || !user.password || !user.country) {
+        setError('Please fill in username, email, password and country.');
+        setIsLoading(false);
+        return;
       }
-    }
 
-    // send register request
-    const payload = { ...user, img: imgUrl };
-    const response = await newRequest.post('/auth/register', payload);
+      // Upload file if provided
+      let imgUrl = '';
+      if (file) {
+        try {
+          console.log('Uploading file...');
+          imgUrl = await upload(file);
+          console.log('File uploaded successfully:', imgUrl);
+        } catch (uploadErr) {
+          console.warn('Upload failed, proceeding without image:', uploadErr);
+          imgUrl = '';
+        }
+      }
 
-    // Handle response shapes
-    let userData = null;
-    let token = null;
+      // Prepare registration payload
+      const payload = { ...user, img: imgUrl };
+      console.log('Sending registration payload:', { ...payload, password: '[HIDDEN]' });
 
-    if (response?.data) {
-      if (response.data.user && response.data.token) {
-        userData = response.data.user;
-        token = response.data.token;
-      } else if (response.data.token) {
-        token = response.data.token;
-        userData = response.data.user || { ...user, img: imgUrl };
-      } else if (response.data.message && response.status === 201) {
-        // older backend: registered but no token -> attempt login
-        const loginRes = await newRequest.post('/auth/login', {
-          email: user.email,
-          password: user.password,
-        });
-        userData = loginRes.data.user;
-        token = loginRes.data.token;
+      // Send registration request
+      const response = await newRequest.post('/auth/register', payload);
+      console.log('Registration response:', response);
+
+      // Extract user data and token from response
+      let userData = null;
+      let token = null;
+
+      // Try different response formats
+      if (response?.data) {
+        // Format 1: {user: {...}, token: "..."}
+        if (response.data.user) {
+          userData = response.data.user;
+          token = response.data.token;
+        }
+        // Format 2: {token: "...", id: "...", username: "...", ...} (user data directly in data)
+        else if (response.data.id || response.data.username) {
+          userData = response.data;
+          token = response.data.token;
+        }
+        // Format 3: Just user data, no token
+        else {
+          userData = response.data;
+          // Try to get token from headers or other places
+          token = response.headers?.authorization || response.data.token;
+        }
+      }
+
+      // If we don't have user data, something went wrong
+      if (!userData || !userData.username) {
+        console.error('Invalid user data received:', userData);
+        throw new Error('Registration successful but user data is invalid');
+      }
+
+      console.log('Processing successful registration with user:', userData);
+
+      // Store user data and token
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+
+      // Update navbar immediately
+      if (window.refreshNavbarUser) {
+        console.log('Refreshing navbar after registration');
+        window.refreshNavbarUser();
       } else {
-        // Unexpected shape
-        throw new Error(response.data.message || 'Registration succeeded but server response is unexpected.');
+        console.warn('window.refreshNavbarUser not available');
       }
-    } else {
-      throw new Error('No response data from server');
+
+      // Navigate based on user type
+      if (userData.isSeller || user.isSeller) {
+        navigate('/seller-dashboard');
+      } else {
+        // For marketers, show profile prompt
+        setShowProfilePrompt(true);
+      }
+
+    } catch (err) {
+      console.error('Registration error:', err);
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data && typeof err.response.data === 'string') {
+        errorMessage = err.response.data;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (!token || !userData) throw new Error('Authentication token missing after register');
-
-    // store token & user
-    localStorage.setItem('token', token);
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-
-    // navigate
-    if (user.isSeller) {
-      navigate('/seller-dashboard');
-    } else {
-      setShowProfilePrompt(true);
-    }
-  } catch (err) {
-    console.error('Registration error:', err);
-    let errorMessage = 'Something went wrong';
-    if (err.response?.data?.message) {
-      errorMessage = err.response.data.message;
-    } else if (err.message) {
-      errorMessage = err.message;
-    }
-    setError(errorMessage);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4">
@@ -245,6 +271,7 @@ const handleSubmit = async (e) => {
                       type="text"
                       placeholder="United States"
                       onChange={handleChange}
+                      required
                       className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
                   </div>

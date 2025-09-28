@@ -326,7 +326,7 @@ function Navbar() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
+          {/* <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               <Link
                 to="/gigs"
@@ -337,7 +337,7 @@ function Navbar() {
                 Browse Gigs
               </Link>
             </div>
-          </div>
+          </div> */}
 
           {/* User Menu / Auth Buttons */}
           <div className="hidden md:block">
@@ -642,72 +642,7 @@ function Navbar() {
         )}
       </div>
 
-      {/* Debug Panel - Remove this in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{
-          position: 'fixed',
-          top: '70px',
-          right: '10px',
-          background: 'rgba(0,0,0,0.9)',
-          color: 'white',
-          padding: '15px',
-          borderRadius: '8px',
-          fontSize: '12px',
-          zIndex: 9999,
-          maxWidth: '350px',
-          fontFamily: 'monospace'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#00ff00' }}>🐛 Navbar Debug Panel</div>
-          <div>userLoaded: <span style={{color: userLoaded ? '#00ff00' : '#ff0000'}}>{userLoaded ? 'true' : 'false'}</span></div>
-          <div>currentUser: <span style={{color: currentUser ? '#00ff00' : '#ff0000'}}>{currentUser ? 'exists' : 'null'}</span></div>
-          <div>username: {currentUser?.username || 'none'}</div>
-          <div>localStorage: <span style={{color: localStorage.getItem('currentUser') ? '#00ff00' : '#ff0000'}}>
-            {localStorage.getItem('currentUser') ? 'exists' : 'empty'}
-          </span></div>
-          <button 
-            onClick={() => {
-              const storage = localStorage.getItem('currentUser');
-              console.log('=== FULL DEBUG INFO ===');
-              console.log('localStorage raw:', storage);
-              console.log('localStorage parsed:', storage ? JSON.parse(storage) : null);
-              console.log('currentUser state:', currentUser);
-              console.log('userLoaded state:', userLoaded);
-              alert('Debug info logged to console - check browser console (F12)');
-            }}
-            style={{ 
-              marginTop: '8px', 
-              padding: '4px 8px', 
-              fontSize: '10px', 
-              background: '#007acc', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Log Full Debug Info
-          </button>
-          <button 
-            onClick={() => {
-              refreshCurrentUser();
-              alert('User state refreshed!');
-            }}
-            style={{ 
-              marginTop: '8px', 
-              marginLeft: '5px',
-              padding: '4px 8px', 
-              fontSize: '10px', 
-              background: '#28a745', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Refresh User
-          </button>
-        </div>
-      )}
+
     </nav>
   )
 }
