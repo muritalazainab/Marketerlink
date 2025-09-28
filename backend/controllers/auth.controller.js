@@ -3,8 +3,6 @@ import createError from "../utils/createError.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-
-
 export const register = async (req, res, next) => {
   try {
     const { username, email, password, country, phone, desc, isSeller, img } = req.body;
@@ -41,10 +39,12 @@ export const register = async (req, res, next) => {
 
     const savedUser = await newUser.save();
 
-    // create token
-    const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET || 'secretkey', {
-      expiresIn: '7d'
-    });
+    // FIXED: Use consistent JWT_SECRET
+    const token = jwt.sign(
+      { id: savedUser._id, isSeller: savedUser.isSeller }, 
+      process.env.JWT_SECRET || 'secretkey', 
+      { expiresIn: '7d' }
+    );
 
     // remove password before sending
     const { password: _p, ...userWithoutPassword } = savedUser._doc;
@@ -71,33 +71,53 @@ export const register = async (req, res, next) => {
   }
 };
 
-
 export const login = async (req, res, next) => {
   try {
-    const user = await User.findOne({ username: req.body.username });
+    console.log('Login attempt:', req.body); // Debug log
+    
+    const { username, email, password } = req.body;
+    
+    // FIXED: Allow login with either username OR email
+    let user;
+    if (email) {
+      user = await User.findOne({ email });
+    } else if (username) {
+      user = await User.findOne({ username });
+    } else {
+      return next(createError(400, "Username or email is required!"));
+    }
 
     if (!user) return next(createError(404, "User not found!"));
 
-    const isCorrect = bcrypt.compareSync(req.body.password, user.password);
+    const isCorrect = bcrypt.compareSync(password, user.password);
     if (!isCorrect)
-      return next(createError(400, "Wrong password or username!"));
+      return next(createError(400, "Wrong password!"));
 
+    // FIXED: Use consistent JWT_SECRET
     const token = jwt.sign(
       {
         id: user._id,
         isSeller: user.isSeller,
       },
-      process.env.JWT_KEY
+      process.env.JWT_SECRET || 'secretkey'  // Use same secret as register
     );
 
-    const { password, ...info } = user._doc;
+    const { password: _, ...info } = user._doc;
+    
     res
       .cookie("accessToken", token, {
         httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
       })
       .status(200)
-      .send(info);
+      .json({
+        message: "Login successful",
+        user: info,
+        token // Also send token in response body for easier frontend handling
+      });
   } catch (err) {
+    console.error('Login error:', err); // Debug log
     next(err);
   }
 };
@@ -105,11 +125,11 @@ export const login = async (req, res, next) => {
 export const logout = async (req, res) => {
   res
     .clearCookie("accessToken", {
-      sameSite: "none",
-      secure: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production',
     })
     .status(200)
-    .send("User has been logged out.");
+    .json({ message: "User has been logged out." });
 };
 
 export const registerAdmin = async (req, res) => {
@@ -117,32 +137,32 @@ export const registerAdmin = async (req, res) => {
     const { adminKey, ...adminData } = req.body;
     const ADMIN_KEY = process.env.ADMIN_REGISTRATION_KEY;
     
-   console.log('Environment key exists:', !!ADMIN_KEY);
+    console.log('Environment key exists:', !!ADMIN_KEY);
     console.log('Environment key length:', ADMIN_KEY?.length);
-    console.log('Environment key:', JSON.stringify(ADMIN_KEY)); 
     console.log('Received key exists:', !!adminKey);
     console.log('Received key length:', adminKey?.length);
-    console.log('Received key:', JSON.stringify(adminKey)); 
     console.log('Keys match (strict):', adminKey === ADMIN_KEY);
     console.log('Keys match (trimmed):', adminKey?.trim() === ADMIN_KEY?.trim());
+    
     // Verify admin key with better error details
     if (!ADMIN_KEY) {
-            console.error('ADMIN_REGISTRATION_KEY not found in environment variables');
-           return res.status(500).json({ message: "Server configuration error" });
+      console.error('ADMIN_REGISTRATION_KEY not found in environment variables');
+      return res.status(500).json({ message: "Server configuration error" });
     }
     
-    if (adminKey) {
+    // FIXED: This condition was wrong - it should check if adminKey is NOT equal
+    if (!adminKey || adminKey.trim() !== ADMIN_KEY.trim()) {
       return res.status(403).json({ 
         message: "Invalid admin access key",
         debug: process.env.NODE_ENV === 'development' ? {
-          received_length: adminKey.length,
+          received_length: adminKey?.length,
           expected_length: ADMIN_KEY.length
         } : undefined
       });
     }
 
     // Check if admin already exists
-      const existingAdmin = await User.findOne({ 
+    const existingAdmin = await User.findOne({ 
       $or: [
         { email: adminData.email },
         { username: adminData.username }
@@ -166,7 +186,7 @@ export const registerAdmin = async (req, res) => {
     });
 
     await newAdmin.save();
-        console.log('Admin created successfully:', newAdmin.username);
+    console.log('Admin created successfully:', newAdmin.username);
 
     res.status(201).json({
       message: "Admin account created successfully",
@@ -194,8 +214,8 @@ export const adminLogin = async (req, res) => {
 
     const token = jwt.sign(
       { id: admin._id, isAdmin: true, role: "admin" },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" } // optional expiry
+      process.env.JWT_SECRET || 'secretkey',  // FIXED: Use consistent JWT_SECRET
+      { expiresIn: "1d" }
     );
 
     res.status(200).json({
@@ -203,6 +223,7 @@ export const adminLogin = async (req, res) => {
       user: { ...admin._doc, password: undefined },
     });
   } catch (error) {
+    console.error('Admin login error:', error);
     res.status(500).json({ message: error.message });
   }
 };
