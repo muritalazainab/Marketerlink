@@ -32,7 +32,7 @@ try {
 }
 };
 app.use(cors({ 
-  origin: ["http://localhost:5173", "https://marketer-link2-pbk84gdkf-zmuritala8-2371s-projects.vercel.app"], 
+  origin: ["http://localhost:5173", "https://marketerlink.surge.sh"], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
