@@ -10,7 +10,7 @@ import Register from "./pages/register/Register";
 import Add from "./pages/Add/Add";
 import Orders from "./pages/orders/Order";
 import Messages from "./pages/messages/Messages";
-import Message from "./pages/message/Mesage";
+import Message from "./pages/message/Message";
 import ProfileForm from "./components/ProfileForm/ProfileForm";
 import MarketerProfileView from "./components/MarketerProfileView/MarketerProfileView";
 import ProjectDashboard from './projects/ProjectDashboard';
@@ -21,7 +21,6 @@ import WorkSubmissionDashboard from './components/WorkSubmissionDashboard';
 import WorkReviewDashboard from './components/WorkReviewDashboard'; 
 import PlatformEarningsTracker from './components/PlatformEarningsTracker';
 import AdminRegister from './pages/AdminRegister';
-
 import MarketerDashboard from "./components/marketerDashboard/MarketerDashboard";
 import SellerDashboard from "./components/sellerDashboard/SellerDashboard";
 import {
