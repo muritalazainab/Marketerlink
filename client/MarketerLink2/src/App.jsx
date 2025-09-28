@@ -7,7 +7,7 @@ import Login from "./pages/login/Login";
 import Register from "./pages/register/Register";
 import Add from "./pages/Add/Add";
 import Orders from "./pages/orders/Order";
-import Messages from "./pages/messages/Messages"
+// import Messages from "./pages/messages/Messages"
 import Message from "./pages/message/Message";
 import ProfileForm from "./components/ProfileForm/ProfileForm";
 import MarketerProfileView from "./components/MarketerProfileView/MarketerProfileView";
