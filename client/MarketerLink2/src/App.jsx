@@ -65,10 +65,10 @@ function App() {
           path: "/orders",
           element: <Orders />,
         },
-        {
-          path: "/messages",
-          element:<Messages/>,
-        },
+        // {
+        //   path: "/messages",
+        //   element:<Messages/>,
+        // },
         {
           path: "/message/:id",
           element: <Message />,
