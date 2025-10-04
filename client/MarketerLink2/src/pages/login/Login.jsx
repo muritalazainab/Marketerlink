@@ -1,74 +1,80 @@
-"use client"
-import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react"
-import newRequest from "../../../utils/newRequest"
-import { useNavigate } from "react-router-dom"
-import { useToast } from '../../components/ToastNotification';
+"use client";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
+import newRequest from "../../../utils/newRequest";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "../../components/ToastNotification";
 
 function Login() {
   const toast = useToast();
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState(null)
-  const [showProfilePrompt, setShowProfilePrompt] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("currentUser"))
+    const user = JSON.parse(localStorage.getItem("currentUser"));
     if (user && !user.isSeller) {
-      setShowProfilePrompt(true)
+      setShowProfilePrompt(true);
     }
-  }, [])
+  }, []);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
-    
-    try {
-      console.log('Attempting login with:', { username }); // Debug log
-      
-      const res = await newRequest.post("/auth/login", { username, password })
-      
-      const user = res.data
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-      console.log('Login successful, user data:', user); // Debug log
+    try {
+      console.log("Attempting login with:", { username }); // Debug log
+
+      const res = await newRequest.post("/auth/login", { username, password });
+
+      const user = res.data;
+
+      console.log("Login successful, user data:", user); // Debug log
 
       // Store user data and token
-      localStorage.setItem("currentUser", JSON.stringify(user))
+      localStorage.setItem("currentUser", JSON.stringify(user));
       if (res.data.token) {
-        localStorage.setItem("token", res.data.token)
+        localStorage.setItem("token", res.data.token);
       }
 
       // ✅ REFRESH NAVBAR IMMEDIATELY
       if (window.refreshNavbarUser) {
-        console.log('Refreshing navbar after login'); // Debug log
+        console.log("Refreshing navbar after login"); // Debug log
         window.refreshNavbarUser();
       } else {
-        console.warn('window.refreshNavbarUser not available'); // Debug log
+        console.warn("window.refreshNavbarUser not available"); // Debug log
       }
 
       toast.success(`Welcome back, ${user.username}!`);
-      
+
       // Navigate based on user type
       if (user.isSeller) {
-        navigate("/seller-dashboard")
+        navigate("/seller-dashboard");
       } else {
-        navigate("/marketer-dashboard")
+        navigate("/marketer-dashboard");
       }
     } catch (err) {
-      console.error('Login error:', err); // Debug log
-      const errorMessage = err.response?.data || "Login failed. Please try again.";
+      console.error("Login error:", err); // Debug log
+
+      const errorMessage =
+        err.response?.data?.message || // if backend sends { message: "error" }
+        (typeof err.response?.data === "string" ? err.response.data : null) ||
+        err.message ||
+        "Login failed. Please try again.";
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -80,13 +86,17 @@ function Login() {
               Market<span className="text-blue-600">Link</span>
             </div>
           </Link>
-          <p className="text-gray-600 mt-2">Welcome back! Please sign in to continue.</p>
+          <p className="text-gray-600 mt-2">
+            Welcome back! Please sign in to continue.
+          </p>
         </div>
 
         {/* Login Form */}
         <div className="bg-white shadow-xl rounded-2xl border border-gray-100 p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
-          
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            Sign In
+          </h2>
+
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -97,7 +107,9 @@ function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Input */}
             <div>
-              <label className="block text-gray-700 font-medium text-sm mb-2">Username</label>
+              <label className="block text-gray-700 font-medium text-sm mb-2">
+                Username
+              </label>
               <div className="relative">
                 <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
@@ -114,7 +126,9 @@ function Login() {
 
             {/* Password Input */}
             <div>
-              <label className="block text-gray-700 font-medium text-sm mb-2">Password</label>
+              <label className="block text-gray-700 font-medium text-sm mb-2">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
@@ -131,7 +145,11 @@ function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -150,7 +168,10 @@ function Login() {
           <div className="mt-6 text-center">
             <p className="text-gray-600 text-sm">
               Don't have an account?{" "}
-              <Link to="/register" className="text-blue-600 font-medium hover:text-blue-700 hover:underline transition-colors">
+              <Link
+                to="/register"
+                className="text-blue-600 font-medium hover:text-blue-700 hover:underline transition-colors"
+              >
                 Create Account
               </Link>
             </p>
@@ -158,14 +179,17 @@ function Login() {
 
           {/* Forgot Password */}
           <div className="mt-4 text-center">
-            <a href="#" className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+            <a
+              href="#"
+              className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+            >
               Forgot your password?
             </a>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default Login
+export default Login;
