@@ -33,6 +33,7 @@ function Login() {
       console.log('Attempting login with:', { username }); // Debug log
       
       const res = await newRequest.post("/auth/login", { username, password })
+      
       const user = res.data
 
       console.log('Login successful, user data:', user); // Debug log
