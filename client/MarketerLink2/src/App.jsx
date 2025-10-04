@@ -11,20 +11,17 @@ import Orders from "./pages/orders/Order";
 import Message from "./pages/message/Message";
 import ProfileForm from "./components/ProfileForm/ProfileForm";
 import MarketerProfileView from "./components/MarketerProfileView/MarketerProfileView";
-import ProjectDashboard from './projects/ProjectDashboard';
-import ReviewInterface from './projects/SubmissionCountdownComponent';
-import SubmissionCountdownComponent  from './projects/SubmissionCountdownComponent';
-import { ToastProvider } from './components/ToastNotification';
-import WorkSubmissionDashboard from './components/WorkSubmissionDashboard';
-import WorkReviewDashboard from './components/WorkReviewDashboard'; 
-import PlatformEarningsTracker from './components/PlatformEarningsTracker';
-import AdminRegister from './pages/AdminRegister';
+import ProjectDashboard from "./projects/ProjectDashboard";
+import ReviewInterface from "./projects/SubmissionCountdownComponent";
+import SubmissionCountdownComponent from "./projects/SubmissionCountdownComponent";
+import { ToastProvider } from "./components/ToastNotification";
+import WorkSubmissionDashboard from "./components/WorkSubmissionDashboard";
+import WorkReviewDashboard from "./components/WorkReviewDashboard";
+import PlatformEarningsTracker from "./components/PlatformEarningsTracker";
+import AdminRegister from "./pages/AdminRegister";
 import MarketerDashboard from "./components/marketerDashboard/MarketerDashboard";
 import SellerDashboard from "./components/sellerDashboard/SellerDashboard";
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Pay from "./pages/pay/Pay";
 import Success from "./pages/success/Success";
 
@@ -34,7 +31,7 @@ function App() {
   const Layout = () => {
     return (
       <div className="app">
-        <ToastProvider> 
+        <ToastProvider>
           <QueryClientProvider client={queryClient}>
             <Navbar />
             <Outlet />
@@ -98,41 +95,36 @@ function App() {
           element: <Success />,
         },
         {
-           path:"/seller-dashboard",
-            element:<SellerDashboard />
+          path: "/seller-dashboard",
+          element: <SellerDashboard />,
         },
         {
-          path:"/marketer-dashboard" ,
-         element:<MarketerDashboard />
+          path: "/marketer-dashboard",
+          element: <MarketerDashboard />,
         },
         {
-           path:"/project/:id",
-            element:<ProjectDashboard />
-           },
-        {path:"/project/:id/submit",
-          element:< SubmissionCountdownComponent/>
-            }, 
-          {path:"/project/:id/review",
-             element:<ReviewInterface />
-            },
-            {path:"/work-submission",
-             element:<WorkSubmissionDashboard />}, 
-             { path:"/work-review", 
-              element:<WorkReviewDashboard />},
-        {path:"/platform-earnings",
-   element:<PlatformEarningsTracker />} ,
+          path: "/project/:id",
+          element: <ProjectDashboard />,
+        },
+        {
+          path: "/project/:id/submit",
+          element: <SubmissionCountdownComponent />,
+        },
+        { path: "/project/:id/review", element: <ReviewInterface /> },
+        { path: "/work-submission", element: <WorkSubmissionDashboard /> },
+        { path: "/work-review", element: <WorkReviewDashboard /> },
+        { path: "/platform-earnings", element: <PlatformEarningsTracker /> },
 
         {
-  path: "/create-profile",
-  element: <ProfileForm />
-},
-     { path:"/admin-register",
-       element:<AdminRegister />},
+          path: "/create-profile",
+          element: <ProfileForm />,
+        },
+        { path: "/admin-register", element: <AdminRegister /> },
 
-{
-  path: "/profile/:userId", 
-  element: <MarketerProfileView />
-}
+        {
+          path: "/profile/:userId",
+          element: <MarketerProfileView />,
+        },
       ],
     },
   ]);

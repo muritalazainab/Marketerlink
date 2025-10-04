@@ -34,13 +34,13 @@ function Login() {
 
       const res = await newRequest.post("/auth/login", { username, password });
 
-      const user = res.data;
+      const response = res.data.user;
 
-      console.log("Login successful, user data:", user); // Debug log
+      console.log("Login successful, user data:", response); // Debug log
 
       // Store user data and token
-      localStorage.setItem("currentUser", JSON.stringify(user));
-      if (res.data.token) {
+      localStorage.setItem("currentUser", JSON.stringify(response));
+      if (response.token) {
         localStorage.setItem("token", res.data.token);
       }
 
@@ -52,10 +52,10 @@ function Login() {
         console.warn("window.refreshNavbarUser not available"); // Debug log
       }
 
-      toast.success(`Welcome back, ${user.username}!`);
+      toast.success(`Welcome back, ${response.username}!`);
 
       // Navigate based on user type
-      if (user.isSeller) {
+      if (response.isSeller) {
         navigate("/seller-dashboard");
       } else {
         navigate("/marketer-dashboard");
